@@ -7,7 +7,7 @@
     {{-- Toolbar --}}
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-stretch align-items-lg-center mb-3 gap-2">
         <div class="d-flex flex-wrap gap-2">
-            <a href="{{ route('catatan.create') }}" class="btn btn-dark btn-action flex-fill flex-sm-grow-0">
+            <a href="{{ route('catatan.create') }}" class="btn btn-primary btn-action flex-fill flex-sm-grow-0">
                 <i class="fa-solid fa-plus"></i>
                 <span class="d-none d-sm-inline">Tambah Catatan</span>
                 <span class="d-inline d-sm-none">Tambah</span>
@@ -34,6 +34,9 @@
             @if(request('minggu'))
                 <input type="hidden" name="minggu" value="{{ request('minggu') }}">
             @endif
+            @if(request('status'))
+                <input type="hidden" name="status" value="{{ request('status') }}">
+            @endif
             <input type="text" name="search" value="{{ request('search') }}"
                    class="form-control" placeholder="Cari hari ke / tanggal..." style="min-width: 0;">
             <button type="submit" class="btn btn-outline-secondary btn-action flex-shrink-0">
@@ -57,7 +60,7 @@
                     <div class="modal-body">
                         <p class="small text-muted">
                             File harus berformat <code>.xlsx</code> / <code>.csv</code> dengan kolom:
-                            <code>nama</code>, <code>hari_ke</code>, <code>tanggal</code>, <code>pendapatan</code>
+                            <code>nama</code>, <code>hari_ke</code>, <code>tanggal</code>, <code>pendapatan</code>, <code>status</code>
                         </p>
                         <input type="file" name="file" class="form-control @error('file') is-invalid @enderror" required>
                         @error('file') <div class="invalid-feedback">{{ $message }}</div> @enderror
@@ -73,16 +76,17 @@
         </div>
     </div>
 
-    {{-- Filter Minggu --}}
+    {{-- Filter Minggu + Status --}}
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-body py-3">
             <form method="GET" action="{{ route('catatan.index') }}"
-                  class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2">
+                  class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 flex-wrap">
                 @if(request('search'))
                     <input type="hidden" name="search" value="{{ request('search') }}">
                 @endif
+
                 <label class="form-label mb-0 fw-semibold text-nowrap">
-                    <i class="fa-solid fa-calendar-week text-secondary"></i> Kategori per Minggu
+                    <i class="fa-solid fa-calendar-week text-secondary"></i> Minggu
                 </label>
                 <select name="minggu" class="form-select w-auto" onchange="this.form.submit()">
                     <option value="">Semua Minggu</option>
@@ -93,7 +97,16 @@
                     @endfor
                 </select>
 
-                @if(request('minggu') || request('search'))
+                <label class="form-label mb-0 fw-semibold text-nowrap">
+                    <i class="fa-solid fa-circle-check text-secondary"></i> Status
+                </label>
+                <select name="status" class="form-select w-auto" onchange="this.form.submit()">
+                    <option value="">Semua Status</option>
+                    <option value="sudah_bayar" {{ request('status') == 'sudah_bayar' ? 'selected' : '' }}>Sudah Bayar</option>
+                    <option value="belum_bayar" {{ request('status') == 'belum_bayar' ? 'selected' : '' }}>Belum Bayar</option>
+                </select>
+
+                @if(request('minggu') || request('search') || request('status'))
                     <a href="{{ route('catatan.index') }}" class="btn btn-sm btn-outline-secondary">
                         <i class="fa-solid fa-xmark"></i> Reset Filter
                     </a>
@@ -103,16 +116,49 @@
     </div>
 
     {{-- Total Pendapatan --}}
-    <div class="card border-0 shadow-sm mb-3" style="background: linear-gradient(135deg, #111827, #1f2937);">
-        <div class="card-body d-flex justify-content-between align-items-center text-white flex-wrap gap-2">
-            <div class="d-flex align-items-center gap-3">
+    {{-- Ringkasan Total --}}
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #111827, #1f2937);">
+            <div class="card-body d-flex align-items-center gap-3 text-white">
                 <div class="rounded-circle bg-white bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0"
                      style="width:48px; height:48px;">
                     <i class="fa-solid fa-sack-dollar fs-5"></i>
                 </div>
                 <div>
                     <div class="small text-white-50">Total Pendapatan</div>
-                    <h4 class="mb-0 fw-bold">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</h4>
+                    <h5 class="mb-0 fw-bold">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-success-subtle d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:48px; height:48px;">
+                    <i class="fa-solid fa-circle-check text-success fs-5"></i>
+                </div>
+                <div>
+                    <div class="small text-muted">Sudah Bayar</div>
+                    <h5 class="mb-0 fw-bold text-success">Rp {{ number_format($totalSudahBayar, 0, ',', '.') }}</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="rounded-circle bg-danger-subtle d-flex align-items-center justify-content-center flex-shrink-0"
+                        style="width:48px; height:48px;">
+                        <i class="fa-solid fa-circle-xmark text-danger fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="small text-muted">Belum Bayar</div>
+                        <h5 class="mb-0 fw-bold text-danger">Rp {{ number_format($totalBelumBayar, 0, ',', '.') }}</h5>
+                    </div>
                 </div>
             </div>
         </div>
@@ -129,6 +175,7 @@
                         <th>Hari Ke</th>
                         <th>Tanggal</th>
                         <th>Pendapatan</th>
+                        <th>Status</th>
                         <th class="text-center pe-3">Aksi</th>
                     </tr>
                 </thead>
@@ -145,6 +192,17 @@
                             <td>{{ $catatan->tanggal->format('d-m-Y') }}</td>
                             <td class="fw-semibold text-success">
                                 Rp {{ number_format($catatan->pendapatan, 0, ',', '.') }}
+                            </td>
+                            <td>
+                                @if($catatan->status === 'sudah_bayar')
+                                    <span class="badge bg-success-subtle text-success-emphasis">
+                                        <i class="fa-solid fa-circle-check"></i> Sudah Bayar
+                                    </span>
+                                @else
+                                    <span class="badge bg-danger-subtle text-danger-emphasis">
+                                        <i class="fa-solid fa-circle-xmark"></i> Belum Bayar
+                                    </span>
+                                @endif
                             </td>
                             <td class="text-center pe-3">
                                 <a href="{{ route('catatan.edit', $catatan) }}"
@@ -165,7 +223,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-5">
+                            <td colspan="7" class="text-center text-muted py-5">
                                 <i class="fa-regular fa-folder-open fs-2 d-block mb-2"></i>
                                 Belum ada catatan.
                             </td>
@@ -191,8 +249,16 @@
                         </span>
                     </div>
 
-                    <div class="fw-bold text-success fs-5 mb-3">
-                        Rp {{ number_format($catatan->pendapatan, 0, ',', '.') }}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="fw-bold text-success fs-5">
+                            Rp {{ number_format($catatan->pendapatan, 0, ',', '.') }}
+                        </div>
+
+                        @if($catatan->status === 'sudah_bayar')
+                            <span class="badge bg-success-subtle text-success-emphasis">Sudah Bayar</span>
+                        @else
+                            <span class="badge bg-danger-subtle text-danger-emphasis">Belum Bayar</span>
+                        @endif
                     </div>
 
                     <div class="d-flex gap-2">

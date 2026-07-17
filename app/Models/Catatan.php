@@ -15,6 +15,7 @@ class Catatan extends Model
         'hari_ke',
         'tanggal',
         'pendapatan',
+        'status',
     ];
 
     protected $casts = [

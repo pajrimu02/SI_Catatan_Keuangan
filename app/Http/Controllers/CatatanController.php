@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Catatan;
 use Illuminate\Http\Request;
- use App\Exports\CatatanExport;
+use App\Exports\CatatanExport;
 use App\Imports\CatatanImport;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -33,39 +33,51 @@ class CatatanController extends Controller
         ));
     }
 
-    /**
-     * List catatan + search + filter minggu + pagination
-     */
+    
     public function index(Request $request)
-    {
-        $query = Catatan::where('user_id', auth()->id());
+{
+    $query = Catatan::where('user_id', auth()->id());
 
-        // Search berdasarkan hari_ke atau tanggal
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('hari_ke', 'like', "%{$search}%")
-                  ->orWhere('tanggal', 'like', "%{$search}%");
-            });
-        }
-
-        // Filter per minggu (minggu ke-1 = hari 1-7, minggu ke-2 = hari 8-14, dst)
-        if ($request->filled('minggu')) {
-            $minggu = (int) $request->minggu;
-            $awal   = ($minggu - 1) * 7 + 1;
-            $akhir  = $minggu * 7;
-            $query->whereBetween('hari_ke', [$awal, $akhir]);
-        }
-
-        // Total pendapatan berdasarkan filter yang aktif
-        $totalPendapatan = (clone $query)->sum('pendapatan');
-
-        $catatans = $query->orderBy('tanggal', 'desc')
-            ->paginate(10)
-            ->withQueryString();
-
-        return view('pages.catatan.index', compact('catatans', 'totalPendapatan'));
+    // Search berdasarkan hari_ke atau tanggal
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->where(function ($q) use ($search) {
+            $q->where('hari_ke', 'like', "%{$search}%")
+              ->orWhere('tanggal', 'like', "%{$search}%");
+        });
     }
+
+    // Filter per minggu
+    if ($request->filled('minggu')) {
+        $minggu = (int) $request->minggu;
+        $awal   = ($minggu - 1) * 7 + 1;
+        $akhir  = $minggu * 7;
+        $query->whereBetween('hari_ke', [$awal, $akhir]);
+    }
+
+    // Filter status pembayaran
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
+
+    // Total pendapatan berdasarkan filter yang aktif (semua status)
+    $totalPendapatan = (clone $query)->sum('pendapatan');
+
+    // Total per status (tetap mengikuti filter search & minggu, tapi bukan filter status)
+    $totalSudahBayar = (clone $query)->where('status', 'sudah_bayar')->sum('pendapatan');
+    $totalBelumBayar = (clone $query)->where('status', 'belum_bayar')->sum('pendapatan');
+
+    $catatans = $query->orderBy('tanggal', 'desc')
+        ->paginate(10)
+        ->withQueryString();
+
+    return view('pages.catatan.index', compact(
+        'catatans',
+        'totalPendapatan',
+        'totalSudahBayar',
+        'totalBelumBayar'
+    ));
+}
 
     public function create()
     {
@@ -78,10 +90,11 @@ class CatatanController extends Controller
             'hari_ke'    => 'required|integer|min:1',
             'tanggal'    => 'required|date',
             'pendapatan' => 'required|integer|min:0',
+            'status'     => 'required|in:sudah_bayar,belum_bayar',
         ]);
 
         $validated['user_id'] = auth()->id();
-        $validated['nama']    = 'Pajri'; // permanen
+        $validated['nama']    = 'Pajri'; 
 
         Catatan::create($validated);
 
@@ -110,6 +123,7 @@ class CatatanController extends Controller
             'hari_ke'    => 'required|integer|min:1',
             'tanggal'    => 'required|date',
             'pendapatan' => 'required|integer|min:0',
+            'status'     => 'required|in:sudah_bayar,belum_bayar',
         ]);
 
         $catatan->update($validated); // nama tidak diubah
@@ -133,10 +147,6 @@ class CatatanController extends Controller
     {
         abort_if($catatan->user_id !== auth()->id(), 403);
     }
-
-   
-
-    // ... di dalam class CatatanController
 
     public function importExcel(Request $request)
     {

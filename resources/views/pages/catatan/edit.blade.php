@@ -47,7 +47,7 @@
                             @error('tanggal') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label class="form-label fw-semibold">
                                 <i class="fa-solid fa-sack-dollar text-secondary"></i> Pendapatan
                             </label>
@@ -58,6 +58,17 @@
                                        value="{{ old('pendapatan', $catatan->pendapatan) }}" required>
                                 @error('pendapatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                <i class="fa-solid fa-circle-check text-secondary"></i> Status Pembayaran
+                            </label>
+                            <select name="status" class="form-select @error('status') is-invalid @enderror" required>
+                                <option value="belum_bayar" {{ old('status', $catatan->status) == 'belum_bayar' ? 'selected' : '' }}>Belum Bayar</option>
+                                <option value="sudah_bayar" {{ old('status', $catatan->status) == 'sudah_bayar' ? 'selected' : '' }}>Sudah Bayar</option>
+                            </select>
+                            @error('status') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
                         <div class="d-flex gap-2">

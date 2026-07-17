@@ -33,7 +33,7 @@ class CatatanExport implements FromCollection, WithHeadings, WithMapping, WithSt
 
     public function headings(): array
     {
-        return ['No', 'Nama', 'Hari Ke', 'Tanggal', 'Pendapatan'];
+        return ['No', 'Nama', 'Hari Ke', 'Tanggal', 'Pendapatan', 'Status'];
     }
 
     public function map($catatan): array
@@ -47,6 +47,7 @@ class CatatanExport implements FromCollection, WithHeadings, WithMapping, WithSt
             $catatan->hari_ke,
             $catatan->tanggal->format('d-m-Y'),
             $catatan->pendapatan,
+            $catatan->status === 'sudah_bayar' ? 'Sudah Bayar' : 'Belum Bayar',
         ];
     }
 
@@ -57,14 +58,14 @@ class CatatanExport implements FromCollection, WithHeadings, WithMapping, WithSt
             'B' => 20,
             'C' => 12,
             'D' => 16,
-            'E' => 20,
+            'E' => 18,
+            'F' => 16,
         ];
     }
 
     public function styles(Worksheet $sheet)
     {
-        // Header (baris 1)
-        $sheet->getStyle('A1:E1')->applyFromArray([
+        $sheet->getStyle('A1:F1')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF'],
@@ -95,7 +96,7 @@ class CatatanExport implements FromCollection, WithHeadings, WithMapping, WithSt
                 $totalRow    = $lastDataRow + 1;
 
                 // Border seluruh tabel data
-                $sheet->getStyle("A1:E{$lastDataRow}")->applyFromArray([
+                $sheet->getStyle("A1:F{$lastDataRow}")->applyFromArray([
                     'borders' => [
                         'allBorders' => [
                             'borderStyle' => Border::BORDER_THIN,
@@ -108,30 +109,50 @@ class CatatanExport implements FromCollection, WithHeadings, WithMapping, WithSt
                 $sheet->getStyle("E2:E{$lastDataRow}")
                     ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
                 $sheet->getStyle("E2:E{$lastDataRow}")
-                    ->getNumberFormat()->setFormatCode('#,##0');
+                    ->getNumberFormat()->setFormatCode('#,##0'); 
 
-                // Kolom No & Hari Ke rata tengah
-                $sheet->getStyle("A2:A{$lastDataRow}")
-                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle("C2:C{$lastDataRow}")
-                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle("D2:D{$lastDataRow}")
-                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $totalSudahBayar = $this->catatans->where('status', 'sudah_bayar')->sum('pendapatan');
+                $totalBelumBayar = $this->catatans->where('status', 'belum_bayar')->sum('pendapatan');
+
+                $rowSudah = $totalRow + 1;
+                $rowBelum = $totalRow + 2;
+
+                $sheet->setCellValue("D{$rowSudah}", 'SUDAH BAYAR');
+                $sheet->setCellValue("E{$rowSudah}", $totalSudahBayar);
+
+                $sheet->setCellValue("D{$rowBelum}", 'BELUM BAYAR');
+                $sheet->setCellValue("E{$rowBelum}", $totalBelumBayar);
+
+                $sheet->getStyle("D{$rowSudah}:E{$rowSudah}")->applyFromArray([
+                    'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '198754']],
+                ]);
+
+                $sheet->getStyle("D{$rowBelum}:E{$rowBelum}")->applyFromArray([
+                    'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DC3545']],
+                ]);
+
+                $sheet->getStyle("E{$rowSudah}")->getNumberFormat()->setFormatCode('"Rp" #,##0');
+                $sheet->getStyle("E{$rowBelum}")->getNumberFormat()->setFormatCode('"Rp" #,##0');
+                // Kolom No, Hari Ke, Tanggal, Status rata tengah
+                foreach (['A', 'C', 'D', 'F'] as $col) {
+                    $sheet->getStyle("{$col}2:{$col}{$lastDataRow}")
+                        ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                }
 
                 // Baris Total
                 $sheet->setCellValue("D{$totalRow}", 'TOTAL PENDAPATAN');
                 $sheet->setCellValue("E{$totalRow}", $this->totalPendapatan);
 
-                $sheet->mergeCells("D{$totalRow}:D{$totalRow}");
-
-                $sheet->getStyle("D{$totalRow}:E{$totalRow}")->applyFromArray([
+                $sheet->getStyle("D{$totalRow}:F{$totalRow}")->applyFromArray([
                     'font' => [
                         'bold' => true,
                         'color' => ['rgb' => 'FFFFFF'],
                     ],
                     'fill' => [
                         'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => '198754'], // hijau
+                        'startColor' => ['rgb' => '198754'],
                     ],
                     'borders' => [
                         'allBorders' => [
@@ -146,10 +167,10 @@ class CatatanExport implements FromCollection, WithHeadings, WithMapping, WithSt
                 $sheet->getStyle("E{$totalRow}")
                     ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
-                // Zebra stripe (baris genap sedikit abu-abu)
+                // Zebra stripe
                 for ($row = 2; $row <= $lastDataRow; $row++) {
                     if ($row % 2 === 0) {
-                        $sheet->getStyle("A{$row}:E{$row}")->applyFromArray([
+                        $sheet->getStyle("A{$row}:F{$row}")->applyFromArray([
                             'fill' => [
                                 'fillType' => Fill::FILL_SOLID,
                                 'startColor' => ['rgb' => 'F3F4F6'],

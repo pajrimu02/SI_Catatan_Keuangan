@@ -17,6 +17,9 @@ class CatatanImport implements ToModel, WithHeadingRow, WithValidation
             'hari_ke'    => $row['hari_ke'],
             'tanggal'    => \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($row['tanggal']),
             'pendapatan' => $row['pendapatan'],
+            'status'     => in_array($row['status'] ?? null, ['sudah_bayar', 'belum_bayar'])
+                                ? $row['status']
+                                : 'belum_bayar',
         ]);
     }
 

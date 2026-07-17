@@ -10,6 +10,8 @@
         th { background: #111827; color: white; }
         h2 { margin-bottom: 0; }
         .total { margin-top: 15px; font-weight: bold; font-size: 14px; }
+        .badge-sudah { color: #198754; font-weight: bold; }
+        .badge-belum { color: #dc3545; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -24,6 +26,7 @@
                 <th>Hari Ke</th>
                 <th>Tanggal</th>
                 <th>Pendapatan</th>
+                <th>Status</th>
             </tr>
         </thead>
         <tbody>
@@ -34,9 +37,12 @@
                     <td>{{ $catatan->hari_ke }}</td>
                     <td>{{ $catatan->tanggal->format('d-m-Y') }}</td>
                     <td>Rp {{ number_format($catatan->pendapatan, 0, ',', '.') }}</td>
+                    <td class="{{ $catatan->status === 'sudah_bayar' ? 'badge-sudah' : 'badge-belum' }}">
+                        {{ $catatan->status === 'sudah_bayar' ? 'Sudah Bayar' : 'Belum Bayar' }}
+                    </td>
                 </tr>
             @empty
-                <tr><td colspan="5">Belum ada catatan.</td></tr>
+                <tr><td colspan="6">Belum ada catatan.</td></tr>
             @endforelse
         </tbody>
     </table>
