@@ -15,23 +15,47 @@ class CatatanController extends Controller
      * Dashboard ringkasan
      */
     public function dashboard()
-    {
-        $userId = auth()->id();
+        {
+            $userId = auth()->id();
 
-        $totalCatatan    = Catatan::where('user_id', $userId)->count();
-        $totalPendapatan = Catatan::where('user_id', $userId)->sum('pendapatan');
+            $totalCatatan     = Catatan::where('user_id', $userId)->count();
+            $totalPendapatan  = Catatan::where('user_id', $userId)->sum('pendapatan');
+            $totalSudahBayar  = Catatan::where('user_id', $userId)->where('status', 'sudah_bayar')->sum('pendapatan');
+            $totalBelumBayar  = Catatan::where('user_id', $userId)->where('status', 'belum_bayar')->sum('pendapatan');
 
-        $catatanTerbaru = Catatan::where('user_id', $userId)
-            ->orderBy('tanggal', 'desc')
-            ->take(5)
-            ->get();
+            $jumlahSudahBayar = Catatan::where('user_id', $userId)->where('status', 'sudah_bayar')->count();
+            $jumlahBelumBayar = Catatan::where('user_id', $userId)->where('status', 'belum_bayar')->count();
 
-        return view('pages.dashboard.index', compact(
-            'totalCatatan',
-            'totalPendapatan',
-            'catatanTerbaru'
-        ));
-    }
+            $rataRataPendapatan = $totalCatatan > 0 ? $totalPendapatan / $totalCatatan : 0;
+
+            // Data untuk grafik tren per minggu (minggu 1-5, berdasarkan hari_ke)
+            $trenMingguan = [];
+            for ($minggu = 1; $minggu <= 5; $minggu++) {
+                $awal  = ($minggu - 1) * 7 + 1;
+                $akhir = $minggu * 7;
+
+                $trenMingguan[] = Catatan::where('user_id', $userId)
+                    ->whereBetween('hari_ke', [$awal, $akhir])
+                    ->sum('pendapatan');
+            }
+
+            $catatanTerbaru = Catatan::where('user_id', $userId)
+                ->orderBy('tanggal', 'desc')
+                ->take(5)
+                ->get();
+
+            return view('pages.dashboard.index', compact(
+                'totalCatatan',
+                'totalPendapatan',
+                'totalSudahBayar',
+                'totalBelumBayar',
+                'jumlahSudahBayar',
+                'jumlahBelumBayar',
+                'rataRataPendapatan',
+                'trenMingguan',
+                'catatanTerbaru'
+            ));
+        }
 
     
     public function index(Request $request)

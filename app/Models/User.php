@@ -19,10 +19,21 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-    ];
+    'name',
+    'email',
+    'password',
+    'avatar',
+];
+
+// Accessor untuk ambil URL avatar (fallback ke UI Avatars kalau belum upload)
+public function getAvatarUrlAttribute(): string
+{
+    if ($this->avatar) {
+        return asset('storage/' . $this->avatar);
+    }
+
+    return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=6366f1&color=fff&bold=true';
+}
 
     /**
      * The attributes that should be hidden for serialization.

@@ -11,8 +11,7 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-4 text-center">
 
-                    <img src="https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&size=110&background=6366f1&color=fff&bold=true"
-                         class="rounded-circle mb-3" alt="Foto Profil">
+                    <img src="{{ $user->avatar_url }}" class="rounded-circle mb-3" alt="Foto Profil">
 
                     <h5 class="mb-1">{{ $user->name }}</h5>
                     <p class="text-muted mb-4">{{ $user->email }}</p>

@@ -13,7 +13,36 @@
 
     <div class="row justify-content-center">
         <div class="col-lg-6">
+        <form method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data">
+            @csrf
+            @method('PATCH')
 
+            {{-- Upload Foto Profil --}}
+            <div class="text-center mb-4">
+                <img src="{{ $user->avatar_url }}"
+                    id="avatarPreview"
+                    class="rounded-circle mb-2"
+                    style="width:100px; height:100px; object-fit:cover;"
+                    alt="Foto Profil">
+
+                <div>
+                    <label for="avatarInput" class="btn btn-sm btn-outline-dark">
+                        <i class="fa-solid fa-camera"></i> Ganti Foto
+                    </label>
+                    <input type="file" name="avatar" id="avatarInput" accept="image/*" class="d-none"
+                        onchange="previewAvatar(event)">
+                </div>
+
+                @error('avatar') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Nama</label>
+                {{-- ... input nama tetap sama ... --}}
+            </div>
+
+            {{-- ... sisanya tetap sama ... --}}
+        </form>
             {{-- Informasi Profil --}}
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body p-4">

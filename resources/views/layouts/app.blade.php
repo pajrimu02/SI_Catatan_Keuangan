@@ -181,8 +181,7 @@
             <div class="profile">
                 <span class="d-none d-sm-inline">{{ auth()->user()->name }}</span>
                 <a href="{{ route('profile.index') }}" class="avatar-link" title="Lihat Profil">
-                    <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name) }}&background=6366f1&color=fff&bold=true"
-                         alt="profile">
+                    <img src="{{ auth()->user()->avatar_url }}" alt="profile">
                 </a>
             </div>
         </div>
@@ -202,3 +201,14 @@
     @stack('scripts')
 </body>
 </html>
+@push('scripts')
+<script>
+function previewAvatar(event) {
+    const preview = document.getElementById('avatarPreview');
+    const file = event.target.files[0];
+    if (file) {
+        preview.src = URL.createObjectURL(file);
+    }
+}
+</script>
+@endpush
