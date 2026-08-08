@@ -87,98 +87,113 @@ class CatatanExport implements FromCollection, WithHeadings, WithMapping, WithSt
     }
 
     public function registerEvents(): array
-    {
-        return [
-            AfterSheet::class => function (AfterSheet $event) {
-                $sheet = $event->sheet->getDelegate();
+{
+    return [
+        AfterSheet::class => function (AfterSheet $event) {
+            $sheet = $event->sheet->getDelegate();
 
-                $lastDataRow = $this->catatans->count() + 1; // +1 karena baris 1 = heading
-                $totalRow    = $lastDataRow + 1;
+            $lastDataRow = $this->catatans->count() + 1;
+            $totalRow    = $lastDataRow + 1;
 
-                // Border seluruh tabel data
-                $sheet->getStyle("A1:F{$lastDataRow}")->applyFromArray([
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => 'CCCCCC'],
+            // Border seluruh tabel data
+            $sheet->getStyle("A1:F{$lastDataRow}")->applyFromArray([
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => 'CCCCCC'],
+                    ],
+                ],
+            ]);
+
+            // Kolom Pendapatan (E) rata kanan + format ribuan
+            $sheet->getStyle("E2:E{$lastDataRow}")
+                ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $sheet->getStyle("E2:E{$lastDataRow}")
+                ->getNumberFormat()->setFormatCode('#,##0');
+
+            // Kolom No, Hari Ke, Tanggal, Status rata tengah
+            foreach (['A', 'C', 'D', 'F'] as $col) {
+                $sheet->getStyle("{$col}2:{$col}{$lastDataRow}")
+                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            }
+
+            // ✅ Warna kolom Status per baris sesuai status
+            foreach ($this->catatans as $i => $catatan) {
+                $row = $i + 2;
+
+                if ($catatan->status === 'sudah_bayar') {
+                    $sheet->getStyle("F{$row}")->applyFromArray([
+                        'font' => [
+                            'bold' => true,
+                            'color' => ['rgb' => '198754'],
                         ],
-                    ],
-                ]);
-
-                // Kolom Pendapatan (E) rata kanan + format ribuan
-                $sheet->getStyle("E2:E{$lastDataRow}")
-                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-                $sheet->getStyle("E2:E{$lastDataRow}")
-                    ->getNumberFormat()->setFormatCode('#,##0'); 
-
-                $totalSudahBayar = $this->catatans->where('status', 'sudah_bayar')->sum('pendapatan');
-                $totalBelumBayar = $this->catatans->where('status', 'belum_bayar')->sum('pendapatan');
-
-                $rowSudah = $totalRow + 1;
-                $rowBelum = $totalRow + 2;
-
-                $sheet->setCellValue("D{$rowSudah}", 'SUDAH BAYAR');
-                $sheet->setCellValue("E{$rowSudah}", $totalSudahBayar);
-
-                $sheet->setCellValue("D{$rowBelum}", 'BELUM BAYAR');
-                $sheet->setCellValue("E{$rowBelum}", $totalBelumBayar);
-
-                $sheet->getStyle("D{$rowSudah}:E{$rowSudah}")->applyFromArray([
-                    'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '198754']],
-                ]);
-
-                $sheet->getStyle("D{$rowBelum}:E{$rowBelum}")->applyFromArray([
-                    'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DC3545']],
-                ]);
-
-                $sheet->getStyle("E{$rowSudah}")->getNumberFormat()->setFormatCode('"Rp" #,##0');
-                $sheet->getStyle("E{$rowBelum}")->getNumberFormat()->setFormatCode('"Rp" #,##0');
-                // Kolom No, Hari Ke, Tanggal, Status rata tengah
-                foreach (['A', 'C', 'D', 'F'] as $col) {
-                    $sheet->getStyle("{$col}2:{$col}{$lastDataRow}")
-                        ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                }
-
-                // Baris Total
-                $sheet->setCellValue("D{$totalRow}", 'TOTAL PENDAPATAN');
-                $sheet->setCellValue("E{$totalRow}", $this->totalPendapatan);
-
-                $sheet->getStyle("D{$totalRow}:F{$totalRow}")->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                        'color' => ['rgb' => 'FFFFFF'],
-                    ],
-                    'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => '198754'],
-                    ],
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => 'CCCCCC'],
+                    ]);
+                } else {
+                    $sheet->getStyle("F{$row}")->applyFromArray([
+                        'font' => [
+                            'bold' => true,
+                            'color' => ['rgb' => 'DC3545'],
                         ],
-                    ],
-                ]);
-
-                $sheet->getStyle("E{$totalRow}")
-                    ->getNumberFormat()->setFormatCode('"Rp" #,##0');
-                $sheet->getStyle("E{$totalRow}")
-                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-
-                // Zebra stripe
-                for ($row = 2; $row <= $lastDataRow; $row++) {
-                    if ($row % 2 === 0) {
-                        $sheet->getStyle("A{$row}:F{$row}")->applyFromArray([
-                            'fill' => [
-                                'fillType' => Fill::FILL_SOLID,
-                                'startColor' => ['rgb' => 'F3F4F6'],
-                            ],
-                        ]);
-                    }
+                    ]);
                 }
-            },
-        ];
-    }
+            }
+
+            // Zebra stripe
+            for ($row = 2; $row <= $lastDataRow; $row++) {
+                if ($row % 2 === 0) {
+                    $sheet->getStyle("A{$row}:F{$row}")->applyFromArray([
+                        'fill' => [
+                            'fillType' => Fill::FILL_SOLID,
+                            'startColor' => ['rgb' => 'F3F4F6'],
+                        ],
+                    ]);
+                }
+            }
+
+            // Baris Total
+            $sheet->setCellValue("D{$totalRow}", 'TOTAL PENDAPATAN');
+            $sheet->setCellValue("E{$totalRow}", $this->totalPendapatan);
+
+            $sheet->getStyle("D{$totalRow}:F{$totalRow}")->applyFromArray([
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '198754']],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => 'CCCCCC'],
+                    ],
+                ],
+            ]);
+
+            $sheet->getStyle("E{$totalRow}")->getNumberFormat()->setFormatCode('"Rp" #,##0');
+            $sheet->getStyle("E{$totalRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+            // Ringkasan Sudah Bayar & Belum Bayar
+            $totalSudahBayar = $this->catatans->where('status', 'sudah_bayar')->sum('pendapatan');
+            $totalBelumBayar = $this->catatans->where('status', 'belum_bayar')->sum('pendapatan');
+
+            $rowSudah = $totalRow + 1;
+            $rowBelum = $totalRow + 2;
+
+            $sheet->setCellValue("D{$rowSudah}", 'SUDAH BAYAR');
+            $sheet->setCellValue("E{$rowSudah}", $totalSudahBayar);
+
+            $sheet->setCellValue("D{$rowBelum}", 'BELUM BAYAR');
+            $sheet->setCellValue("E{$rowBelum}", $totalBelumBayar);
+
+            $sheet->getStyle("D{$rowSudah}:E{$rowSudah}")->applyFromArray([
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '198754']],
+            ]);
+
+            $sheet->getStyle("D{$rowBelum}:E{$rowBelum}")->applyFromArray([
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DC3545']],
+            ]);
+
+            $sheet->getStyle("E{$rowSudah}")->getNumberFormat()->setFormatCode('"Rp" #,##0');
+            $sheet->getStyle("E{$rowBelum}")->getNumberFormat()->setFormatCode('"Rp" #,##0');
+        },
+    ];
+}
 }
