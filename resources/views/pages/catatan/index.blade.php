@@ -38,7 +38,7 @@
                 <input type="hidden" name="status" value="{{ request('status') }}">
             @endif
             <input type="text" name="search" value="{{ request('search') }}"
-                   class="form-control" placeholder="Cari hari ke / tanggal..." style="min-width: 0;">
+                   class="form-control" placeholder="Cari hari / tanggal..." style="min-width: 0;">
             <button type="submit" class="btn btn-outline-secondary btn-action flex-shrink-0">
                 <i class="fa-solid fa-magnifying-glass"></i>
             </button>
@@ -60,7 +60,7 @@
                     <div class="modal-body">
                         <p class="small text-muted">
                             File harus berformat <code>.xlsx</code> / <code>.csv</code> dengan kolom:
-                            <code>nama</code>, <code>hari_ke</code>, <code>tanggal</code>, <code>pendapatan</code>, <code>status</code>
+                            <code>nama</code>, <code>hari</code>, <code>tanggal</code>, <code>pendapatan</code>, <code>status</code>
                         </p>
                         <input type="file" name="file" class="form-control @error('file') is-invalid @enderror" required>
                         @error('file') <div class="invalid-feedback">{{ $message }}</div> @enderror
@@ -172,7 +172,7 @@
                     <tr>
                         <th class="ps-3">No</th>
                         <th>Nama</th>
-                        <th>Hari Ke</th>
+                        <th>Hari</th>
                         <th>Tanggal</th>
                         <th>Pendapatan</th>
                         <th>Status</th>
@@ -186,7 +186,7 @@
                             <td>{{ $catatan->nama }}</td>
                             <td>
                                 <span class="badge bg-secondary-subtle text-secondary-emphasis">
-                                    Hari {{ $catatan->hari_ke }}
+                                      {{ $catatan->hari }}
                                 </span>
                             </td>
                             <td>{{ $catatan->tanggal->format('d-m-Y') }}</td>
@@ -245,7 +245,7 @@
                             <div class="text-muted small">{{ $catatan->tanggal->format('d-m-Y') }}</div>
                         </div>
                         <span class="badge bg-secondary-subtle text-secondary-emphasis">
-                            Hari {{ $catatan->hari_ke }}
+                            Hari {{ $catatan->hari }}
                         </span>
                     </div>
 
@@ -291,7 +291,7 @@
 
     {{-- Pagination --}}
     <div class="d-flex justify-content-center mt-3 overflow-auto">
-        {{ $catatans->links() }}
+        {{ $catatans->links('vendor.pagination.custom') }}
     </div>
 
 @endsection

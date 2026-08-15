@@ -15,93 +15,90 @@ class CatatanController extends Controller
      * Dashboard ringkasan
      */
     public function dashboard()
-        {
-            $userId = auth()->id();
+    {
+        $userId = auth()->id();
 
-            $totalCatatan     = Catatan::where('user_id', $userId)->count();
-            $totalPendapatan  = Catatan::where('user_id', $userId)->sum('pendapatan');
-            $totalSudahBayar  = Catatan::where('user_id', $userId)->where('status', 'sudah_bayar')->sum('pendapatan');
-            $totalBelumBayar  = Catatan::where('user_id', $userId)->where('status', 'belum_bayar')->sum('pendapatan');
+        $totalCatatan     = Catatan::where('user_id', $userId)->count();
+        $totalPendapatan  = Catatan::where('user_id', $userId)->sum('pendapatan');
+        $totalSudahBayar  = Catatan::where('user_id', $userId)->where('status', 'sudah_bayar')->sum('pendapatan');
+        $totalBelumBayar  = Catatan::where('user_id', $userId)->where('status', 'belum_bayar')->sum('pendapatan');
 
-            $jumlahSudahBayar = Catatan::where('user_id', $userId)->where('status', 'sudah_bayar')->count();
-            $jumlahBelumBayar = Catatan::where('user_id', $userId)->where('status', 'belum_bayar')->count();
+        $jumlahSudahBayar = Catatan::where('user_id', $userId)->where('status', 'sudah_bayar')->count();
+        $jumlahBelumBayar = Catatan::where('user_id', $userId)->where('status', 'belum_bayar')->count();
 
-            $rataRataPendapatan = $totalCatatan > 0 ? $totalPendapatan / $totalCatatan : 0;
+        $rataRataPendapatan = $totalCatatan > 0 ? $totalPendapatan / $totalCatatan : 0;
 
-            // Data untuk grafik tren per minggu (minggu 1-5, berdasarkan hari_ke)
-            $trenMingguan = [];
-            for ($minggu = 1; $minggu <= 5; $minggu++) {
-                $awal  = ($minggu - 1) * 7 + 1;
-                $akhir = $minggu * 7;
-
-                $trenMingguan[] = Catatan::where('user_id', $userId)
-                    ->whereBetween('hari_ke', [$awal, $akhir])
-                    ->sum('pendapatan');
-            }
-
-            $catatanTerbaru = Catatan::where('user_id', $userId)
-                ->orderBy('tanggal', 'desc')
-                ->take(5)
-                ->get();
-
-            return view('pages.dashboard.index', compact(
-                'totalCatatan',
-                'totalPendapatan',
-                'totalSudahBayar',
-                'totalBelumBayar',
-                'jumlahSudahBayar',
-                'jumlahBelumBayar',
-                'rataRataPendapatan',
-                'trenMingguan',
-                'catatanTerbaru'
-            ));
+        // Data untuk grafik tren per minggu (minggu 1-5, berdasarkan tanggal)
+        $trenMingguan = [];
+        for ($minggu = 1; $minggu <= 5; $minggu++) {
+            $trenMingguan[] = Catatan::where('user_id', $userId)
+                ->whereRaw('CEIL(DAYOFMONTH(tanggal) / 7) = ?', [$minggu])
+                ->sum('pendapatan');
         }
 
-    
+        $catatanTerbaru = Catatan::where('user_id', $userId)
+            ->orderBy('tanggal', 'desc')
+            ->take(5)
+            ->get();
+
+        return view('pages.dashboard.index', compact(
+            'totalCatatan',
+            'totalPendapatan',
+            'totalSudahBayar',
+            'totalBelumBayar',
+            'jumlahSudahBayar',
+            'jumlahBelumBayar',
+            'rataRataPendapatan',
+            'trenMingguan',
+            'catatanTerbaru'
+        ));
+    }
+
+    /**
+     * List catatan + search + filter minggu + filter status + pagination
+     */
     public function index(Request $request)
-{
-    $query = Catatan::where('user_id', auth()->id());
+    {
+        $query = Catatan::where('user_id', auth()->id());
 
-    // Search berdasarkan hari_ke atau tanggal
-    if ($request->filled('search')) {
-        $search = $request->search;
-        $query->where(function ($q) use ($search) {
-            $q->where('hari_ke', 'like', "%{$search}%")
-              ->orWhere('tanggal', 'like', "%{$search}%");
-        });
+        // Search berdasarkan hari atau tanggal
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('hari', 'like', "%{$search}%")
+                  ->orWhere('tanggal', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter per minggu (berdasarkan tanggal, minggu ke-1 = tanggal 1-7, dst)
+        if ($request->filled('minggu')) {
+            $minggu = (int) $request->minggu;
+            $query->whereRaw('CEIL(DAYOFMONTH(tanggal) / 7) = ?', [$minggu]);
+        }
+
+        // Filter status pembayaran
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Total pendapatan berdasarkan filter yang aktif (semua status)
+        $totalPendapatan = (clone $query)->sum('pendapatan');
+
+        // Total per status (tetap mengikuti filter search & minggu, tapi bukan filter status)
+        $totalSudahBayar = (clone $query)->where('status', 'sudah_bayar')->sum('pendapatan');
+        $totalBelumBayar = (clone $query)->where('status', 'belum_bayar')->sum('pendapatan');
+
+        $catatans = $query->orderBy('tanggal', 'desc')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('pages.catatan.index', compact(
+            'catatans',
+            'totalPendapatan',
+            'totalSudahBayar',
+            'totalBelumBayar'
+        ));
     }
-
-    // Filter per minggu
-    if ($request->filled('minggu')) {
-        $minggu = (int) $request->minggu;
-        $awal   = ($minggu - 1) * 7 + 1;
-        $akhir  = $minggu * 7;
-        $query->whereBetween('hari_ke', [$awal, $akhir]);
-    }
-
-    // Filter status pembayaran
-    if ($request->filled('status')) {
-        $query->where('status', $request->status);
-    }
-
-    // Total pendapatan berdasarkan filter yang aktif (semua status)
-    $totalPendapatan = (clone $query)->sum('pendapatan');
-
-    // Total per status (tetap mengikuti filter search & minggu, tapi bukan filter status)
-    $totalSudahBayar = (clone $query)->where('status', 'sudah_bayar')->sum('pendapatan');
-    $totalBelumBayar = (clone $query)->where('status', 'belum_bayar')->sum('pendapatan');
-
-    $catatans = $query->orderBy('tanggal', 'desc')
-        ->paginate(10)
-        ->withQueryString();
-
-    return view('pages.catatan.index', compact(
-        'catatans',
-        'totalPendapatan',
-        'totalSudahBayar',
-        'totalBelumBayar'
-    ));
-}
 
     public function create()
     {
@@ -111,14 +108,14 @@ class CatatanController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'hari_ke'    => 'required|integer|min:1',
+            'hari'       => 'required|string|max:20',
             'tanggal'    => 'required|date',
             'pendapatan' => 'required|integer|min:0',
             'status'     => 'required|in:sudah_bayar,belum_bayar',
         ]);
 
         $validated['user_id'] = auth()->id();
-        $validated['nama']    = 'Pajri'; 
+        $validated['nama']    = 'Pajri'; // permanen
 
         Catatan::create($validated);
 
@@ -144,7 +141,7 @@ class CatatanController extends Controller
         $this->authorizeOwner($catatan);
 
         $validated = $request->validate([
-            'hari_ke'    => 'required|integer|min:1',
+            'hari'       => 'required|string|max:20',
             'tanggal'    => 'required|date',
             'pendapatan' => 'required|integer|min:0',
             'status'     => 'required|in:sudah_bayar,belum_bayar',

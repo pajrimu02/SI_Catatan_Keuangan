@@ -12,7 +12,7 @@ class Catatan extends Model
     protected $fillable = [
         'user_id',
         'nama',
-        'hari_ke',
+        'hari',
         'tanggal',
         'pendapatan',
         'status',

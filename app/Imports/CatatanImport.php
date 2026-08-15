@@ -14,7 +14,7 @@ class CatatanImport implements ToModel, WithHeadingRow, WithValidation
         return new Catatan([
             'user_id'    => auth()->id(),
             'nama'       => $row['nama'] ?? 'Pajri',
-            'hari_ke'    => $row['hari_ke'],
+            'hari'    => $row['hari']  ?? null,
             'tanggal'    => \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($row['tanggal']),
             'pendapatan' => $row['pendapatan'],
             'status'     => in_array($row['status'] ?? null, ['sudah_bayar', 'belum_bayar'])
@@ -26,7 +26,7 @@ class CatatanImport implements ToModel, WithHeadingRow, WithValidation
     public function rules(): array
     {
         return [
-            'hari_ke'    => 'required|integer|min:1',
+            'hari'    => 'required|integer|min:1',
             'tanggal'    => 'required',
             'pendapatan' => 'required|integer|min:0',
         ];

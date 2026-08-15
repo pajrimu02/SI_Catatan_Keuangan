@@ -33,7 +33,7 @@ class CatatanExport implements FromCollection, WithHeadings, WithMapping, WithSt
 
     public function headings(): array
     {
-        return ['No', 'Nama', 'Hari Ke', 'Tanggal', 'Pendapatan', 'Status'];
+        return ['No', 'Nama', 'Hari', 'Tanggal', 'Pendapatan', 'Status'];
     }
 
     public function map($catatan): array
@@ -44,7 +44,7 @@ class CatatanExport implements FromCollection, WithHeadings, WithMapping, WithSt
         return [
             $no,
             $catatan->nama,
-            $catatan->hari_ke,
+            $catatan->hari,
             $catatan->tanggal->format('d-m-Y'),
             $catatan->pendapatan,
             $catatan->status === 'sudah_bayar' ? 'Sudah Bayar' : 'Belum Bayar',
@@ -116,8 +116,7 @@ class CatatanExport implements FromCollection, WithHeadings, WithMapping, WithSt
                 $sheet->getStyle("{$col}2:{$col}{$lastDataRow}")
                     ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             }
-
-            // ✅ Warna kolom Status per baris sesuai status
+ 
             foreach ($this->catatans as $i => $catatan) {
                 $row = $i + 2;
 

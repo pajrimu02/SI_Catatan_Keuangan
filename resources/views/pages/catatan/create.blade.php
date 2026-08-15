@@ -16,35 +16,34 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-4">
 
-                    <form method="POST" action="{{ route('catatan.store') }}">
+                    <form method="POST" action="{{ route('catatan.store') }}" id="formCatatan">
                         @csrf
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold">
                                 <i class="fa-solid fa-user text-secondary"></i> Nama
                             </label>
-                            <input type="text" class="form-control bg-light" value="Pajri" disabled>
-                            <small class="text-muted">Nama otomatis terisi, tidak perlu diketik.</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">
-                                <i class="fa-solid fa-hashtag text-secondary"></i> Hari Ke
-                            </label>
-                            <input type="number" name="hari_ke" min="1"
-                                   class="form-control @error('hari_ke') is-invalid @enderror"
-                                   value="{{ old('hari_ke') }}" placeholder="Contoh: 1" required>
-                            @error('hari_ke') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            <input type="text" class="form-control bg-light" value="Pajri" disabled> 
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold">
                                 <i class="fa-solid fa-calendar-day text-secondary"></i> Tanggal
                             </label>
-                            <input type="date" name="tanggal"
+                            <input type="date" name="tanggal" id="inputTanggal"
                                    class="form-control @error('tanggal') is-invalid @enderror"
                                    value="{{ old('tanggal') }}" required>
-                            @error('tanggal') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            @error('tanggal') <div class="invalid-feedback">{{ $message }}</div> @enderror 
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="fa-solid fa-calendar-week text-secondary"></i> Hari
+                            </label>
+                            <input type="text" name="hari" id="inputHari"
+                                   class="form-control bg-light @error('hari') is-invalid @enderror"
+                                   value="{{ old('hari') }}" readonly required>
+                            @error('hari') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
                         <div class="mb-3">
@@ -53,18 +52,18 @@
                             </label>
                             <div class="input-group">
                                 <span class="input-group-text">Rp</span>
-                                <input type="number" name="pendapatan" min="0"
+                                <input type="number" name="pendapatan" id="inputPendapatan" min="0"
                                        class="form-control @error('pendapatan') is-invalid @enderror"
                                        value="{{ old('pendapatan') }}" placeholder="0" required>
                                 @error('pendapatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                            </div>
+                            </div> 
                         </div>
 
                         <div class="mb-4">
                             <label class="form-label fw-semibold">
                                 <i class="fa-solid fa-circle-check text-secondary"></i> Status Pembayaran
                             </label>
-                            <select name="status" class="form-select @error('status') is-invalid @enderror" required>
+                            <select name="status" id="inputStatus" class="form-select @error('status') is-invalid @enderror" required>
                                 <option value="belum_bayar" {{ old('status') == 'belum_bayar' ? 'selected' : '' }}>Belum Bayar</option>
                                 <option value="sudah_bayar" {{ old('status') == 'sudah_bayar' ? 'selected' : '' }}>Sudah Bayar</option>
                             </select>
@@ -87,3 +86,21 @@
     </div>
 
 @endsection
+
+@push('scripts')
+<script>
+    document.getElementById('inputTanggal').addEventListener('change', function () {
+        if (!this.value) return;
+
+        const namaHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', "Jum'at", 'Sabtu'];
+
+        // Parsing manual biar tidak geser hari akibat timezone
+        const [tahun, bulan, tanggal] = this.value.split('-').map(Number);
+        const dateObj = new Date(tahun, bulan - 1, tanggal);
+
+        document.getElementById('inputHari').value = namaHari[dateObj.getDay()];
+        document.getElementById('inputPendapatan').value = 50000;
+        document.getElementById('inputStatus').value = 'belum_bayar';
+    });
+</script>
+@endpush
