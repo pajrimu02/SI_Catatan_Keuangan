@@ -7,13 +7,13 @@ Aplikasi berbasis web untuk mengelola dan memantau pencatatan keuangan pribadi/p
 ## 📷 Tangkapan Layar (Screenshots)
 
 ### 1. Transaksi Keuangan (Masuk & Keluar)
-![Catatan Keuangan Keluar Masuk](docs/screanshots/1.png)
+![Catatan Keuangan Keluar Masuk](docs/screenshots/1.png)
 
 ### 2. Catatan Gaji
-![Catatan Gaji](docs/screanshots/2.png)
+![Catatan Gaji](docs/screenshots/2.png)
 
 ### 3. Dashboard
-![Dashboard](docs/screanshots/3.png)
+![Dashboard](docs/screenshots/3.png)
 
 ---
 
