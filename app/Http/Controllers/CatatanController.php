@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Catatan;
+use App\Models\Transaksi;
 use Illuminate\Http\Request;
 use App\Exports\CatatanExport;
 use App\Imports\CatatanImport;
@@ -14,45 +15,100 @@ class CatatanController extends Controller
     /**
      * Dashboard ringkasan
      */
-    public function dashboard()
-    {
-        $userId = auth()->id();
+    public function dashboard(Request $request)
+{
+    $userId = auth()->id();
 
-        $totalCatatan     = Catatan::where('user_id', $userId)->count();
-        $totalPendapatan  = Catatan::where('user_id', $userId)->sum('pendapatan');
-        $totalSudahBayar  = Catatan::where('user_id', $userId)->where('status', 'sudah_bayar')->sum('pendapatan');
-        $totalBelumBayar  = Catatan::where('user_id', $userId)->where('status', 'belum_bayar')->sum('pendapatan');
+    // ===== Catatan Gaji =====
+    $totalCatatan     = Catatan::where('user_id', $userId)->count();
+    $totalPendapatan  = Catatan::where('user_id', $userId)->sum('pendapatan');
+    $totalSudahBayar  = Catatan::where('user_id', $userId)->where('status', 'sudah_bayar')->sum('pendapatan');
+    $totalBelumBayar  = Catatan::where('user_id', $userId)->where('status', 'belum_bayar')->sum('pendapatan');
 
-        $jumlahSudahBayar = Catatan::where('user_id', $userId)->where('status', 'sudah_bayar')->count();
-        $jumlahBelumBayar = Catatan::where('user_id', $userId)->where('status', 'belum_bayar')->count();
+    $jumlahSudahBayar = Catatan::where('user_id', $userId)->where('status', 'sudah_bayar')->count();
+    $jumlahBelumBayar = Catatan::where('user_id', $userId)->where('status', 'belum_bayar')->count();
 
-        $rataRataPendapatan = $totalCatatan > 0 ? $totalPendapatan / $totalCatatan : 0;
+    $rataRataPendapatan = $totalCatatan > 0 ? $totalPendapatan / $totalCatatan : 0;
 
-        // Data untuk grafik tren per minggu (minggu 1-5, berdasarkan tanggal)
-        $trenMingguan = [];
-        for ($minggu = 1; $minggu <= 5; $minggu++) {
-            $trenMingguan[] = Catatan::where('user_id', $userId)
-                ->whereRaw('CEIL(DAYOFMONTH(tanggal) / 7) = ?', [$minggu])
-                ->sum('pendapatan');
-        }
-
-        $catatanTerbaru = Catatan::where('user_id', $userId)
-            ->orderBy('tanggal', 'desc')
-            ->take(5)
-            ->get();
-
-        return view('pages.dashboard.index', compact(
-            'totalCatatan',
-            'totalPendapatan',
-            'totalSudahBayar',
-            'totalBelumBayar',
-            'jumlahSudahBayar',
-            'jumlahBelumBayar',
-            'rataRataPendapatan',
-            'trenMingguan',
-            'catatanTerbaru'
-        ));
+    // Grafik tren per minggu (minggu 1-5, berdasarkan tanggal)
+    $trenMingguan = [];
+    for ($minggu = 1; $minggu <= 5; $minggu++) {
+        $trenMingguan[] = Catatan::where('user_id', $userId)
+            ->whereRaw('CEIL(DAYOFMONTH(tanggal) / 7) = ?', [$minggu])
+            ->sum('pendapatan');
     }
+
+    $catatanTerbaru = Catatan::where('user_id', $userId)
+        ->orderBy('tanggal', 'desc')
+        ->take(5)
+        ->get();
+
+    // ===== Uang Masuk / Keluar (per bulan terpilih) =====
+    $bulan = $request->input('bulan', now()->format('Y-m'));
+    $now   = \Carbon\Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
+
+    $trx = Transaksi::where('user_id', $userId)
+        ->whereYear('tanggal', $now->year)
+        ->whereMonth('tanggal', $now->month);
+
+    $uangMasuk  = (clone $trx)->where('jenis', 'masuk')->sum('jumlah');
+    $uangKeluar = (clone $trx)->where('jenis', 'keluar')->sum('jumlah');
+    $saldoUang  = $uangMasuk - $uangKeluar;
+
+    $kategoriKeluar = (clone $trx)->where('jenis', 'keluar')
+        ->selectRaw('kategori, SUM(jumlah) as total')
+        ->groupBy('kategori')
+        ->orderByDesc('total')
+        ->get();
+
+    // Grafik harian (tanggal 1 s/d akhir bulan)
+    $jumlahHari   = $now->daysInMonth;
+    $harianMasuk  = array_fill(1, $jumlahHari, 0);
+    $harianKeluar = array_fill(1, $jumlahHari, 0);
+
+    $harian = (clone $trx)
+        ->selectRaw('DAY(tanggal) as hari, jenis, SUM(jumlah) as total')
+        ->groupBy('hari', 'jenis')
+        ->get();
+
+    foreach ($harian as $h) {
+        if ($h->jenis === 'masuk') {
+            $harianMasuk[$h->hari] = (int) $h->total;
+        } else {
+            $harianKeluar[$h->hari] = (int) $h->total;
+        }
+    }
+
+    $harianMasuk  = array_values($harianMasuk);
+    $harianKeluar = array_values($harianKeluar);
+
+    // Transaksi terbaru ikut bulan yang dipilih
+    $transaksiTerbaru = (clone $trx)
+        ->orderBy('tanggal', 'desc')
+        ->orderBy('id', 'desc')
+        ->take(5)
+        ->get();
+
+    return view('pages.dashboard.index', compact(
+        'totalCatatan',
+        'totalPendapatan',
+        'totalSudahBayar',
+        'totalBelumBayar',
+        'jumlahSudahBayar',
+        'jumlahBelumBayar',
+        'rataRataPendapatan',
+        'trenMingguan',
+        'catatanTerbaru',
+        'uangMasuk',
+        'uangKeluar',
+        'saldoUang',
+        'kategoriKeluar',
+        'harianMasuk',
+        'harianKeluar',
+        'transaksiTerbaru',
+        'bulan'
+    ));
+}
 
     /**
      * List catatan + search + filter minggu + filter status + pagination
@@ -70,7 +126,7 @@ class CatatanController extends Controller
             });
         }
 
-        // Filter per minggu (berdasarkan tanggal, minggu ke-1 = tanggal 1-7, dst)
+        // Filter per minggu (minggu ke-1 = tanggal 1-7, dst)
         if ($request->filled('minggu')) {
             $minggu = (int) $request->minggu;
             $query->whereRaw('CEIL(DAYOFMONTH(tanggal) / 7) = ?', [$minggu]);
@@ -81,10 +137,10 @@ class CatatanController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Total pendapatan berdasarkan filter yang aktif (semua status)
+        // Total pendapatan mengikuti filter yang aktif
         $totalPendapatan = (clone $query)->sum('pendapatan');
 
-        // Total per status (tetap mengikuti filter search & minggu, tapi bukan filter status)
+        // Total per status (mengikuti search & minggu, bukan filter status)
         $totalSudahBayar = (clone $query)->where('status', 'sudah_bayar')->sum('pendapatan');
         $totalBelumBayar = (clone $query)->where('status', 'belum_bayar')->sum('pendapatan');
 

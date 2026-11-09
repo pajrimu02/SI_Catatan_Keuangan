@@ -3,6 +3,7 @@
 use App\Http\Controllers\CatatanController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\UangController;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,6 +44,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/catatan/import', [CatatanController::class, 'importExcel'])->name('catatan.import');
     Route::get('/catatan/export/excel', [CatatanController::class, 'exportExcel'])->name('catatan.export.excel');
     Route::get('/catatan/export/pdf', [CatatanController::class, 'exportPdf'])->name('catatan.export.pdf');
+
+    // Uang (CRUD)
+    // Uang Masuk / Keluar
+Route::resource('uang', UangController::class)
+    ->parameters(['uang' => 'transaksi'])
+    ->except(['show']);
 
 });
 

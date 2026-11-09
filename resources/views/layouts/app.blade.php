@@ -146,7 +146,10 @@
         </a>
 
         <a href="{{ route('catatan.index') }}" class="nav-link {{ request()->routeIs('catatan.*') ? 'active' : '' }}">
-            <i class="fa-solid fa-book"></i> Catatan
+            <i class="fa-solid fa-book"></i> Catatan Gaji
+        </a>
+        <a href="{{ route('uang.index') }}" class="nav-link {{ request()->routeIs('uang.*') ? 'active' : '' }}">
+            <i class="fa-solid fa-money-bill-transfer"></i> Uang Masuk / Keluar
         </a>
 
         <div class="nav-divider"></div>
